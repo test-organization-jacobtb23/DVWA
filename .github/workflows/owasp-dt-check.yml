@@ -20,14 +20,14 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2 
       
-      # Generates a BoM and uploads it to OWASP Dependency Track
-      - name: Generates BoM and upload to OWASP DTrack
+      - name: CycloneDX PHP Composer Generate SBOM
         id: riskscoreFromDT
-        uses:  Quobis/action-owasp-dependecy-track-check@main
+        uses: CycloneDX/gh-php-composer-generate-sbom@v1.0.2
         with:
           url: 'http://localhost:8080'
           key: '${{ secrets.SECRET_OWASP_DT_KEY }}'
           language: 'php'
+      # Generates a BoM and uploads it to OWASP Dependency Track
       
       # Show the risk score output 
       - name: Get the output time
