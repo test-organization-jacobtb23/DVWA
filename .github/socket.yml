@@ -1,44 +1,37 @@
-# Socket Security GitHub Actions Workflow
-# Reachability analysis for scheduled/manual scans
-# Scans and populates the Socket.dev UI with runtime reachability data
-#
-# Socket Org: radicle-health (determined by API token)
-# Required API token scopes: socket-basics, uploaded-artifacts, full-scans
-
-name: Socket Security Reachability Scan
-run-name: Socket Security Reachability Scan
+name: Socket Security Scan
 
 on:
+  # Run weekly on Monday at 6 AM UTC
   schedule:
-    - cron: "0 16 * * 1" # Runs at 9 AM Mountain Time every Monday
+    - cron: "0 6 * * 1"
+  # Allow manual triggers from GitHub Actions UI
   workflow_dispatch:
-
-concurrency:
-  group: socket-scan-scheduled
-  cancel-in-progress: true
 
 jobs:
   socket-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
-    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      # Full checkout required for reachability to analyze code paths
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      # Python 3.12+ required for Socket CLI
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # Node.js 20+ required for reachability analysis engine
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      # uv required for Python dependency resolution in reachability
+      - uses: astral-sh/setup-uv@v4
 
       - name: Install Socket CLI
         run: pip install socketsecurity --upgrade
@@ -46,12 +39,14 @@ jobs:
       - name: Run Socket Security Scan
         env:
           SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
-          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           socketcli \
-            --target-path $GITHUB_WORKSPACE \
-            --scm github \
+            --target-path "$GITHUB_WORKSPACE" \
             --repo "${GITHUB_REPOSITORY#*/}" \
             --reach \
             --reach-memory-limit 16384 \
-            --reach-timeout 4800
+            --reach-timeout 3600
+
+          # --reach                   Enable Tier 1 reachability analysis
+          # --reach-memory-limit      Memory limit in MB (default: 8192)
+          # --reach-timeout           Timeout in seconds (default: 1800)
